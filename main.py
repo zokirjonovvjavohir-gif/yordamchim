@@ -2,11 +2,10 @@ import telebot
 import requests
 import os
 from telebot import types
-from gtts import gTTS
-import uuid
 
 TOKEN = os.getenv("TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+OCR_API_KEY = os.getenv("OCR_API_KEY")  # 👈 yangi qo‘shildi
 
 if not TOKEN or not GROQ_API_KEY:
     print("TOKEN yoki GROQ_API_KEY yo‘q!")
@@ -17,6 +16,7 @@ bot = telebot.TeleBot(TOKEN)
 user_memory = {}
 
 
+# ---------------- AI ----------------
 def ask_ai(message, text):
     user_id = message.chat.id
 
@@ -40,7 +40,7 @@ def ask_ai(message, text):
         "messages": [
             {
                 "role": "system",
-                "content": "Sen o‘zbek tilida aniq va tushunarli javob beradigan AI botsan."
+                "content": "Sen o‘zbek tilida aniq va tushunarli javob beradigan AI assistantsan."
             },
             {
                 "role": "user",
@@ -62,21 +62,33 @@ def ask_ai(message, text):
         return res.json()["choices"][0]["message"]["content"]
 
     except Exception as e:
-        print("ERROR:", e)
+        print("REQUEST ERROR:", e)
         return "Ulanish xatoligi 😔"
 
 
-def text_to_voice(text):
+# ---------------- OCR (VISION) ----------------
+def ocr_space_image(image_path):
+    url = "https://api.ocr.space/parse/image"
+
     try:
-        filename = f"voice_{uuid.uuid4()}.mp3"
-        tts = gTTS(text=text, lang="uz")
-        tts.save(filename)
-        return filename
+        with open(image_path, "rb") as f:
+            response = requests.post(
+                url,
+                files={"file": f},
+                data={"apikey": OCR_API_KEY, "language": "uzb"}
+            )
+
+        result = response.json()
+
+        text = result["ParsedResults"][0]["ParsedText"]
+        return text
+
     except Exception as e:
-        print("VOICE ERROR:", e)
-        return None
+        print("OCR ERROR:", e)
+        return ""
 
 
+# ---------------- START ----------------
 @bot.message_handler(commands=['start'])
 def start(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -88,48 +100,58 @@ def start(message):
 
     bot.send_message(
         message.chat.id,
-        "Salom 🤖 Men Javohirning AI botiman!\nSavol ber yoki tugmani bosing.",
+        "Salom 🤖 Men Javohirning AI botiman!\nSavol ber yoki rasm yubor 📷",
         reply_markup=markup
     )
 
 
+# ---------------- HELP ----------------
 @bot.message_handler(func=lambda message: message.text == "ℹ️ Yordam")
 def help_cmd(message):
-    bot.reply_to(message, "Menga istalgan savolni yozing 🤖 Men javob beraman.")
+    bot.reply_to(message, "Savol yozing yoki rasm yuboring 📷🤖")
 
 
+# ---------------- AI MODE ----------------
 @bot.message_handler(func=lambda message: message.text == "🤖 AI bilan gaplashish")
 def ai_mode(message):
     bot.reply_to(message, "Endi savol yozing 😎")
 
 
+# ---------------- TEXT ----------------
 @bot.message_handler(func=lambda message: True)
-def handle_text(message):
+def handle(message):
     reply = ask_ai(message, message.text)
     bot.reply_to(message, reply)
 
 
-@bot.message_handler(content_types=['voice'])
-def handle_voice(message):
+# ---------------- IMAGE / VISION ----------------
+@bot.message_handler(content_types=['photo'])
+def handle_photo(message):
     try:
-        file_info = bot.get_file(message.voice.file_id)
+        file_info = bot.get_file(message.photo[-1].file_id)
         downloaded_file = bot.download_file(file_info.file_path)
 
-        with open("voice.ogg", "wb") as f:
+        image_path = "image.jpg"
+        with open(image_path, "wb") as f:
             f.write(downloaded_file)
 
-        reply = ask_ai(message, "Foydalanuvchi ovoz yubordi")
+        bot.send_message(message.chat.id, "📷 Rasm olindi... tahlil qilinyapti")
 
-        audio = text_to_voice(reply)
+        text = ocr_space_image(image_path)
 
-        if audio:
-            bot.send_voice(message.chat.id, open(audio, "rb"))
-        else:
-            bot.reply_to(message, reply)
+        if not text.strip():
+            bot.send_message(message.chat.id, "Rasmda matn topilmadi 😕")
+            return
+
+        bot.send_message(message.chat.id, f"📄 O‘qilgan matn:\n{text}")
+
+        reply = ask_ai(message, "Bu matnni tushuntir va agar masala bo‘lsa yech:\n" + text)
+
+        bot.send_message(message.chat.id, reply)
 
     except Exception as e:
-        print("VOICE HANDLER ERROR:", e)
-        bot.reply_to(message, "Voice xatolik 😔")
+        print("VISION ERROR:", e)
+        bot.send_message(message.chat.id, "Rasmni tahlil qilib bo‘lmadi 😔")
 
 
 print("BOT STARTED 🚀")
