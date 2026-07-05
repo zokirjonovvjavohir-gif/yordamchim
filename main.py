@@ -5,7 +5,7 @@ from telebot import types
 
 TOKEN = os.getenv("TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-OCR_API_KEY = os.getenv("OCR_API_KEY")  # 👈 yangi qo‘shildi
+OCR_API_KEY = os.getenv("OCR_API_KEY")
 
 if not TOKEN or not GROQ_API_KEY:
     print("TOKEN yoki GROQ_API_KEY yo‘q!")
@@ -40,7 +40,7 @@ def ask_ai(message, text):
         "messages": [
             {
                 "role": "system",
-                "content": "Sen o‘zbek tilida aniq va tushunarli javob beradigan AI assistantsan."
+                "content": "Sen o‘zbek tilida aniq, tushunarli va foydali javob beradigan AI assistantsan."
             },
             {
                 "role": "user",
@@ -66,7 +66,7 @@ def ask_ai(message, text):
         return "Ulanish xatoligi 😔"
 
 
-# ---------------- OCR (VISION) ----------------
+# ---------------- OCR ----------------
 def ocr_space_image(image_path):
     url = "https://api.ocr.space/parse/image"
 
@@ -75,53 +75,66 @@ def ocr_space_image(image_path):
             response = requests.post(
                 url,
                 files={"file": f},
-                data={"apikey": OCR_API_KEY, "language": "uzb"}
+                data={"apikey": OCR_API_KEY, "language": "eng"}
             )
 
         result = response.json()
 
-        text = result["ParsedResults"][0]["ParsedText"]
-        return text
+        return result["ParsedResults"][0]["ParsedText"]
 
     except Exception as e:
         print("OCR ERROR:", e)
         return ""
 
 
-# ---------------- START ----------------
+# ---------------- START MENU (UI DESIGN) ----------------
 @bot.message_handler(commands=['start'])
 def start(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 
     markup.add(
-        types.KeyboardButton("🤖 AI bilan gaplashish"),
-        types.KeyboardButton("ℹ️ Yordam")
+        types.KeyboardButton("🤖 AI chat"),
+        types.KeyboardButton("📷 Rasm yuborish")
+    )
+    markup.add(
+        types.KeyboardButton("ℹ️ Yordam"),
+        types.KeyboardButton("⚙️ Sozlamalar")
     )
 
     bot.send_message(
         message.chat.id,
-        "Salom 🤖 Men Javohirning AI botiman!\nSavol ber yoki rasm yubor 📷",
-        reply_markup=markup
+        "👋 <b>Salom!</b>\nMen <b>Javohirning AI botiman 🤖</b>\n\nQuyidan tanla:",
+        reply_markup=markup,
+        parse_mode="HTML"
     )
 
 
 # ---------------- HELP ----------------
-@bot.message_handler(func=lambda message: message.text == "ℹ️ Yordam")
+@bot.message_handler(func=lambda m: m.text == "ℹ️ Yordam")
 def help_cmd(message):
-    bot.reply_to(message, "Savol yozing yoki rasm yuboring 📷🤖")
+    bot.send_message(
+        message.chat.id,
+        "📌 Menga savol yozing yoki rasm yuboring 📷\nMen javob beraman 🤖"
+    )
 
 
 # ---------------- AI MODE ----------------
-@bot.message_handler(func=lambda message: message.text == "🤖 AI bilan gaplashish")
+@bot.message_handler(func=lambda m: m.text == "🤖 AI chat")
 def ai_mode(message):
-    bot.reply_to(message, "Endi savol yozing 😎")
+    bot.send_message(message.chat.id, "✍️ Endi savol yozing 😎")
+
+
+# ---------------- IMAGE MODE INFO ----------------
+@bot.message_handler(func=lambda m: m.text == "📷 Rasm yuborish")
+def photo_info(message):
+    bot.send_message(message.chat.id, "📸 Menga rasm yuboring, men uni o‘qib beraman 🤖")
 
 
 # ---------------- TEXT ----------------
-@bot.message_handler(func=lambda message: True)
+@bot.message_handler(func=lambda m: True)
 def handle(message):
     reply = ask_ai(message, message.text)
-    bot.reply_to(message, reply)
+    bot.send_message(message.chat.id, f"✨ {reply}")
 
 
 # ---------------- IMAGE / VISION ----------------
@@ -140,14 +153,17 @@ def handle_photo(message):
         text = ocr_space_image(image_path)
 
         if not text.strip():
-            bot.send_message(message.chat.id, "Rasmda matn topilmadi 😕")
+            bot.send_message(message.chat.id, "😕 Rasmda matn topilmadi")
             return
 
         bot.send_message(message.chat.id, f"📄 O‘qilgan matn:\n{text}")
 
-        reply = ask_ai(message, "Bu matnni tushuntir va agar masala bo‘lsa yech:\n" + text)
+        reply = ask_ai(
+            message,
+            "Bu matnni tushuntir yoki masala bo‘lsa yech:\n" + text
+        )
 
-        bot.send_message(message.chat.id, reply)
+        bot.send_message(message.chat.id, f"🧠 {reply}")
 
     except Exception as e:
         print("VISION ERROR:", e)
