@@ -78,11 +78,15 @@ def ask_ai(text):
 @bot.message_handler(commands=['start'])
 def start(message):
     bot.reply_to(message, "Salom 🤖 Men AI botman! Menga savol ber")
-
+@bot.message_handler(func=lambda message: message.text == "ℹ️ Yordam")
+def help_cmd(message):
+    bot.reply_to(message, "Menga istalgan savolni yozing 🤖 Men javob beraman.")
 @bot.message_handler(func=lambda message: True)
 def handle(message):
     reply = ask_ai(message.text)
     bot.reply_to(message, reply)
-
+@bot.message_handler(func=lambda message: message.text == "🤖 AI bilan gaplashish")
+def ai_mode(message):
+    bot.reply_to(message, "Endi savol yozing 😎")
 print("BOT STARTED")
 bot.infinity_polling()
