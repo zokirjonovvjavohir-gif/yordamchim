@@ -30,7 +30,8 @@ def ask_ai(text):
         {
             "role": "user",
             "content": text
-        }
+        } 
+            "temperature": 0:3
     ]
 }
     res = requests.post(url, headers=headers, json=data)
