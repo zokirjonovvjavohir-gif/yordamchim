@@ -90,3 +90,5 @@ def ai_mode(message):
     bot.reply_to(message, "Endi savol yozing 😎")
 print("BOT STARTED")
 bot.infinity_polling()
+print("BOT STARTED")
+bot.infinity_polling()
