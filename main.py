@@ -103,7 +103,7 @@ def start(message):
 
     bot.send_message(
         message.chat.id,
-        "👋 <b>Salom!</b>\nMen <b>Javohirning AI botiman 🤖</b>\n\nQuyidan tanla:",
+        "👋 <b>Salom!</b>\nMen <b>JR Assistent botiman 🤖</b>\n\nQuyidan tanla:",
         reply_markup=markup,
         parse_mode="HTML"
     )
