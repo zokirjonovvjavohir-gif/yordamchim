@@ -50,7 +50,7 @@ def handle(message):
         reply = ask_ai(message.text)
         bot.reply_to(message, reply)
     except:
-        bot.reply_to(message, "Xatolik 😕")
+        bot.reply_to(message, "Uzir xozir javop bera olmayman 😕")
 
 print("BOT STARTED")
 bot.polling(none_stop=True)
