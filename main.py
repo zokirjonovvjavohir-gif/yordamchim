@@ -25,4 +25,4 @@ def ask_ai(text):
         "messages": [
         {
             "role": "system",
-            "content": "Sen o‘zbek tilida juda aniq, tushunarli va kocha tilida sokinib 
+            "content": "Sen o‘zbek tilida juda aniq, tushunarli javop beradigan botsan 
