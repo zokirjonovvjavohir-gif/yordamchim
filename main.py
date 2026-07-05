@@ -2,6 +2,8 @@ import telebot
 import requests
 import os
 from telebot import types
+from gtts import gTTS
+import uuid
 
 TOKEN = os.getenv("TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -12,20 +14,19 @@ if not TOKEN or not GROQ_API_KEY:
 
 bot = telebot.TeleBot(TOKEN)
 
-# MEMORY (eslab qolish)
+# MEMORY
 user_memory = {}
 
 
+# AI FUNCTION
 def ask_ai(message, text):
     user_id = message.chat.id
 
-    # memory yaratish
     if user_id not in user_memory:
         user_memory[user_id] = []
 
     user_memory[user_id].append(text)
 
-    # faqat oxirgi 5 ta gapni saqlaydi
     if len(user_memory[user_id]) > 5:
         user_memory[user_id].pop(0)
 
@@ -41,7 +42,7 @@ def ask_ai(message, text):
         "messages": [
             {
                 "role": "system",
-                "content": "Sen o‘zbek tilida aniq, qisqa va tushunarli javob beradigan AI assistantsan."
+                "content": "Sen o‘zbek tilida aniq va tushunarli javob beradigan AI assistantsan."
             },
             {
                 "role": "user",
@@ -67,6 +68,14 @@ def ask_ai(message, text):
         return "Ulanish xatoligi 😔"
 
 
+# TEXT → VOICE
+def text_to_voice(text):
+    filename = f"voice_{uuid.uuid4()}.mp3"
+    tts = gTTS(text=text, lang="uz")
+    tts.save(filename)
+    return filename
+
+
 # START MENU
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -79,7 +88,7 @@ def start(message):
 
     bot.send_message(
         message.chat.id,
-        "Salom 🤖 Men Javoxirning AI botiman!\nSavol ber yoki tugmani bosing.",
+        "Salom 🤖 Men Javohirning AI botiman!\nSavol ber yoki tugmani bosing.",
         reply_markup=markup
     )
 
@@ -96,11 +105,27 @@ def ai_mode(message):
     bot.reply_to(message, "Endi savol yozing 😎")
 
 
-# NORMAL CHAT
+# TEXT CHAT
 @bot.message_handler(func=lambda message: True)
-def handle(message):
+def handle_text(message):
     reply = ask_ai(message, message.text)
     bot.reply_to(message, reply)
+
+
+# VOICE → BOT VOICE REPLY
+@bot.message_handler(content_types=['voice'])
+def handle_voice(message):
+    file_info = bot.get_file(message.voice.file_id)
+    downloaded_file = bot.download_file(file_info.file_path)
+
+    with open("voice.ogg", 'wb') as f:
+        f.write(downloaded_file)
+
+    reply = ask_ai(message, "Foydalanuvchi ovoz yubordi, javob ber")
+
+    audio = text_to_voice(reply)
+
+    bot.send_voice(message.chat.id, open(audio, 'rb'))
 
 
 print("BOT STARTED 🚀")
