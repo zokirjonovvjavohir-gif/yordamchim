@@ -21,7 +21,8 @@ def ask_ai(text):
         "Content-Type": "application/json"
     }
     data = {
-     "model": "llama-3.1-8b-instant",,"messages": [
+     "model": "llama-3.1-8b-instant",
+        "messages": [
         {
             "role": "system",
             "content": "Sen o‘zbek tilida aniq, tushunarli va qisqa javob beradigan yordamchi botsan."
