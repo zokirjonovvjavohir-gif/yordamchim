@@ -3,20 +3,6 @@ import requests
 import os
 from telebot import types
 
-@bot.message_handler(commands=['start'])
-def start(message):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-
-    btn1 = types.KeyboardButton("🤖 AI bilan gaplashish")
-    btn2 = types.KeyboardButton("ℹ️ Yordam")
-
-    markup.add(btn1, btn2)
-
-    bot.send_message(
-        message.chat.id,
-        "Salom 🤖 Men AI botman!\nSavol ber yoki tugmani bosing.",
-        reply_markup=markup
-    )
 TOKEN = os.getenv("TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
@@ -25,20 +11,8 @@ if not TOKEN or not GROQ_API_KEY:
     exit()
 
 bot = telebot.TeleBot(TOKEN)
-@bot.message_handler(commands=['start'])
-def start(message):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 
-    btn1 = types.KeyboardButton("🤖 AI bilan gaplashish")
-    btn2 = types.KeyboardButton("ℹ️ Yordam")
 
-    markup.add(btn1, btn2)
-
-    bot.send_message(
-        message.chat.id,
-        "Salom 🤖 Men AI botman!\nSavol ber yoki tugmani bosing.",
-        reply_markup=markup
-    )
 def ask_ai(text):
     url = "https://api.groq.com/openai/v1/chat/completions"
 
@@ -75,20 +49,38 @@ def ask_ai(text):
         print("REQUEST ERROR:", e)
         return "Ulanish xatoligi 😔"
 
+
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.reply_to(message, "Salom 🤖 Men AI botman! Menga savol ber")
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+
+    btn1 = types.KeyboardButton("🤖 AI bilan gaplashish")
+    btn2 = types.KeyboardButton("ℹ️ Yordam")
+
+    markup.add(btn1, btn2)
+
+    bot.send_message(
+        message.chat.id,
+        "Salom 🤖 Men AI botman!\nSavol ber yoki tugmani bosing.",
+        reply_markup=markup
+    )
+
+
 @bot.message_handler(func=lambda message: message.text == "ℹ️ Yordam")
 def help_cmd(message):
     bot.reply_to(message, "Menga istalgan savolni yozing 🤖 Men javob beraman.")
+
+
+@bot.message_handler(func=lambda message: message.text == "🤖 AI bilan gaplashish")
+def ai_mode(message):
+    bot.reply_to(message, "Endi savol yozing 😎")
+
+
 @bot.message_handler(func=lambda message: True)
 def handle(message):
     reply = ask_ai(message.text)
     bot.reply_to(message, reply)
-@bot.message_handler(func=lambda message: message.text == "🤖 AI bilan gaplashish")
-def ai_mode(message):
-    bot.reply_to(message, "Endi savol yozing 😎")
-print("BOT STARTED")
-bot.infinity_polling()
+
+
 print("BOT STARTED")
 bot.infinity_polling()
