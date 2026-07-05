@@ -14,11 +14,9 @@ if not TOKEN or not GROQ_API_KEY:
 
 bot = telebot.TeleBot(TOKEN)
 
-# MEMORY
 user_memory = {}
 
 
-# AI FUNCTION
 def ask_ai(message, text):
     user_id = message.chat.id
 
@@ -42,7 +40,7 @@ def ask_ai(message, text):
         "messages": [
             {
                 "role": "system",
-                "content": "Sen o‘zbek tilida aniq va tushunarli javob beradigan AI assistantsan."
+                "content": "Sen o‘zbek tilida aniq va tushunarli javob beradigan AI botsan."
             },
             {
                 "role": "user",
@@ -64,19 +62,21 @@ def ask_ai(message, text):
         return res.json()["choices"][0]["message"]["content"]
 
     except Exception as e:
-        print("REQUEST ERROR:", e)
+        print("ERROR:", e)
         return "Ulanish xatoligi 😔"
 
 
-# TEXT → VOICE
 def text_to_voice(text):
-    filename = f"voice_{uuid.uuid4()}.mp3"
-    tts = gTTS(text=text, lang="uz")
-    tts.save(filename)
-    return filename
+    try:
+        filename = f"voice_{uuid.uuid4()}.mp3"
+        tts = gTTS(text=text, lang="uz")
+        tts.save(filename)
+        return filename
+    except Exception as e:
+        print("VOICE ERROR:", e)
+        return None
 
 
-# START MENU
 @bot.message_handler(commands=['start'])
 def start(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -93,39 +93,43 @@ def start(message):
     )
 
 
-# HELP
 @bot.message_handler(func=lambda message: message.text == "ℹ️ Yordam")
 def help_cmd(message):
     bot.reply_to(message, "Menga istalgan savolni yozing 🤖 Men javob beraman.")
 
 
-# AI MODE
 @bot.message_handler(func=lambda message: message.text == "🤖 AI bilan gaplashish")
 def ai_mode(message):
     bot.reply_to(message, "Endi savol yozing 😎")
 
 
-# TEXT CHAT
 @bot.message_handler(func=lambda message: True)
 def handle_text(message):
     reply = ask_ai(message, message.text)
     bot.reply_to(message, reply)
 
 
-# VOICE → BOT VOICE REPLY
 @bot.message_handler(content_types=['voice'])
 def handle_voice(message):
-    file_info = bot.get_file(message.voice.file_id)
-    downloaded_file = bot.download_file(file_info.file_path)
+    try:
+        file_info = bot.get_file(message.voice.file_id)
+        downloaded_file = bot.download_file(file_info.file_path)
 
-    with open("voice.ogg", 'wb') as f:
-        f.write(downloaded_file)
+        with open("voice.ogg", "wb") as f:
+            f.write(downloaded_file)
 
-    reply = ask_ai(message, "Foydalanuvchi ovoz yubordi, javob ber")
+        reply = ask_ai(message, "Foydalanuvchi ovoz yubordi")
 
-    audio = text_to_voice(reply)
+        audio = text_to_voice(reply)
 
-    bot.send_voice(message.chat.id, open(audio, 'rb'))
+        if audio:
+            bot.send_voice(message.chat.id, open(audio, "rb"))
+        else:
+            bot.reply_to(message, reply)
+
+    except Exception as e:
+        print("VOICE HANDLER ERROR:", e)
+        bot.reply_to(message, "Voice xatolik 😔")
 
 
 print("BOT STARTED 🚀")
