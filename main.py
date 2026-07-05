@@ -34,6 +34,8 @@ def ask_ai(text):
         return "AI xatolik (API ishlamadi)"
 
     return res.json()["choices"][0]["message"]["content"]
+
+@bot.message_handler(func=lambda message: True)
 def handle(message):
     try:
         reply = ask_ai(message.text)
