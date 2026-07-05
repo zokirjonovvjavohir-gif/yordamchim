@@ -39,7 +39,7 @@ def ask_ai(message, text):
         "messages": [
             {
                 "role": "system",
-                "content": "Sen o‘zbek tilida aniq, tushunarli va foydali javob beradigan Ilmiy assistent AI assistantsan va har bir berayotgan javobin anniqlikda ozbek zo'zlari bo'lishi kerak chalkashliklar xatolar qilmaysan."
+                "content": "Sen o‘zbek tilida aniq, tushunarli va foydali javob beradigan Ilmiy assistent AI assistantsan va har bir berayotgan javobin anniqlikda ozbek zo'zlari bo'lishi kerak chalkashliklar xatolar qilmaysan va har bir suxbatda o'zingni suxbatlashish xususiyatingni yuksaltirib yangi so'zlar va gaplar o'rganasan."
             },
             {
                 "role": "user",
@@ -62,7 +62,7 @@ def ask_ai(message, text):
 
     except Exception as e:
         print("REQUEST ERROR:", e)
-        return "Ulanish xatoligi 😔"
+        return "Miyyam ishlamay qoldi 😔"
 
 # ---------------- OCR ----------------
 def ocr_space_image(image_path):
@@ -73,7 +73,7 @@ def ocr_space_image(image_path):
             response = requests.post(
                 url,
                 files={"file": f},
-                data={"apikey": OCR_API_KEY, "language": "eng"}
+                data={"apikey": OCR_API_KEY, "language": "uzb"}
             )
 
         result = response.json()
@@ -90,7 +90,7 @@ def start(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 
     markup.add(
-        types.KeyboardButton("🤖 AI chat"),
+        types.KeyboardButton("🤖 keling biroz suxbatlashamiz"),
         types.KeyboardButton("📷 Rasm yuborish")
     )
     markup.add(
@@ -100,7 +100,7 @@ def start(message):
 
     bot.send_message(
         message.chat.id,
-        "👋 <b>Salom!</b>\nMen <b>JR Assistent botiman 🤖</b>\n\nQuyidan tanla:",
+        "👋 <b>Salom!</b>\nMen <b>Zakirovning JR Assistent botiman 🤖</b>\n\nQuyidan tanla:",
         reply_markup=markup,
         parse_mode="HTML"
     )
@@ -145,7 +145,7 @@ def handle_photo(message):
         text = ocr_space_image(image_path)
 
         if not text.strip():
-            bot.send_message(message.chat.id, "😕 Rasmda matn topilmadi")
+            bot.send_message(message.chat.id, "😕 Rasmni o'qishga aqlim yetmadi uzir")
             return
 
         bot.send_message(message.chat.id, f"📄 O‘qilgan matn:\n{text}")
