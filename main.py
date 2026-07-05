@@ -39,7 +39,7 @@ def ask_ai(message, text):
         "messages": [
             {
                 "role": "system",
-                "content": "Sen o‘zbek tilida aniq, tushunarli va foydali javob beradigan AI assistantsan."
+                "content": "Sen o‘zbek tilida aniq, tushunarli va foydali javob beradigan Ilmiy assistent AI assistantsan."
             },
             {
                 "role": "user",
