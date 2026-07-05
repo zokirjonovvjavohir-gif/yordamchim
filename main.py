@@ -2,24 +2,20 @@ import telebot
 import requests
 import os
 from telebot import types
-from openai import OpenAI
 
-# ---------------- ENV KEYS ----------------
 TOKEN = os.getenv("TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 OCR_API_KEY = os.getenv("OCR_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 if not TOKEN or not GROQ_API_KEY:
     print("TOKEN yoki GROQ_API_KEY yo‘q!")
     exit()
 
 bot = telebot.TeleBot(TOKEN)
-client = OpenAI(api_key=OPENAI_API_KEY)
 
 user_memory = {}
 
-# ---------------- AI CHAT (GROQ) ----------------
+# ---------------- AI ----------------
 def ask_ai(message, text):
     user_id = message.chat.id
 
@@ -43,11 +39,11 @@ def ask_ai(message, text):
         "messages": [
             {
                 "role": "system",
-                "content": "Sen o‘zbek tilida aniq va foydali javob berasan."
+                "content": "Sen o‘zbek tilida aniq, tushunarli va foydali javob beradigan AI assistantsan."
             },
             {
                 "role": "user",
-                "content": str(user_memory[user_id]) + "\nSavol: " + text
+                "content": "Oldingi suhbat: " + str(user_memory[user_id]) + "\n\nSavol: " + text
             }
         ],
         "temperature": 0.2
@@ -55,17 +51,18 @@ def ask_ai(message, text):
 
     try:
         bot.send_chat_action(message.chat.id, "typing")
+
         res = requests.post(url, headers=headers, json=data, timeout=20)
 
         if res.status_code != 200:
+            print("API ERROR:", res.text)
             return "AI xatolik 😔"
 
         return res.json()["choices"][0]["message"]["content"]
 
     except Exception as e:
-        print(e)
+        print("REQUEST ERROR:", e)
         return "Ulanish xatoligi 😔"
-
 
 # ---------------- OCR ----------------
 def ocr_space_image(image_path):
@@ -80,32 +77,14 @@ def ocr_space_image(image_path):
             )
 
         result = response.json()
+
         return result["ParsedResults"][0]["ParsedText"]
 
     except Exception as e:
         print("OCR ERROR:", e)
         return ""
 
-
-# ---------------- OPENAI IMAGE EDIT ----------------
-def edit_image_openai(image_path, prompt):
-    try:
-        with open(image_path, "rb") as img:
-            result = client.images.edits.create(
-                model="gpt-image-1",
-                image=img,
-                prompt=prompt,
-                size="1024x1024"
-            )
-
-        return result.data[0].url
-
-    except Exception as e:
-        print("OPENAI IMAGE ERROR:", e)
-        return None
-
-
-# ---------------- START ----------------
+# ---------------- START MENU (UI DESIGN) ----------------
 @bot.message_handler(commands=['start'])
 def start(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -115,39 +94,42 @@ def start(message):
         types.KeyboardButton("📷 Rasm yuborish")
     )
     markup.add(
-        types.KeyboardButton("ℹ️ Yordam")
+        types.KeyboardButton("ℹ️ Yordam"),
+        types.KeyboardButton("⚙️ Sozlamalar")
     )
 
     bot.send_message(
         message.chat.id,
-        "👋 Salom!\nMen AI botman 🤖\nTanlang:",
-        reply_markup=markup
+        "👋 <b>Salom!</b>\nMen <b>JR Assistent botiman 🤖</b>\n\nQuyidan tanla:",
+        reply_markup=markup,
+        parse_mode="HTML"
     )
-
 
 # ---------------- HELP ----------------
 @bot.message_handler(func=lambda m: m.text == "ℹ️ Yordam")
 def help_cmd(message):
     bot.send_message(
         message.chat.id,
-        "📌 AI chat yoki rasm yuboring 📷\nMen uni tahlil qilib yoki o‘zgartirib beraman 🤖"
+        "📌 Menga savol yozing yoki rasm yuboring 📷\nMen javob beraman 🤖"
     )
-
 
 # ---------------- AI MODE ----------------
 @bot.message_handler(func=lambda m: m.text == "🤖 AI chat")
 def ai_mode(message):
-    bot.send_message(message.chat.id, "✍️ Savol yozing")
+    bot.send_message(message.chat.id, "✍️ Endi savol yozing 😎")
 
+# ---------------- IMAGE MODE INFO ----------------
+@bot.message_handler(func=lambda m: m.text == "📷 Rasm yuborish")
+def photo_info(message):
+    bot.send_message(message.chat.id, "📸 Menga rasm yuboring, men uni o‘qib beraman 🤖")
 
-# ---------------- TEXT HANDLER ----------------
+# ---------------- TEXT ----------------
 @bot.message_handler(func=lambda m: True)
-def handle_text(message):
+def handle(message):
     reply = ask_ai(message, message.text)
-    bot.send_message(message.chat.id, reply)
+    bot.send_message(message.chat.id, f"✨ {reply}")
 
-
-# ---------------- IMAGE HANDLER ----------------
+# ---------------- IMAGE / VISION ----------------
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
     try:
@@ -158,28 +140,26 @@ def handle_photo(message):
         with open(image_path, "wb") as f:
             f.write(downloaded_file)
 
-        bot.send_message(message.chat.id, "📷 Rasm qabul qilindi...")
+        bot.send_message(message.chat.id, "📷 Rasm olindi... tahlil qilinyapti")
 
-        prompt = message.caption if message.caption else "Rasmni chiroyli va zamonaviy qilib qayta ishlash"
-
-        # OCR + AI EDIT
         text = ocr_space_image(image_path)
 
-        if text.strip():
-            bot.send_message(message.chat.id, f"📄 Matn: {text}")
-
-        edited_url = edit_image_openai(image_path, prompt)
-
-        if not edited_url:
-            bot.send_message(message.chat.id, "❌ Rasmni o‘zgartirib bo‘lmadi")
+        if not text.strip():
+            bot.send_message(message.chat.id, "😕 Rasmda matn topilmadi")
             return
 
-        bot.send_photo(message.chat.id, edited_url, caption="✨ AI tahrir qildi")
+        bot.send_message(message.chat.id, f"📄 O‘qilgan matn:\n{text}")
+
+        reply = ask_ai(
+            message,
+            "Bu matnni tushuntir yoki masala bo‘lsa yech:\n" + text
+        )
+
+        bot.send_message(message.chat.id, f"🧠 {reply}")
 
     except Exception as e:
-        print("ERROR:", e)
-        bot.send_message(message.chat.id, "Xatolik 😔")
-
+        print("VISION ERROR:", e)
+        bot.send_message(message.chat.id, "Rasmni tahlil qilib bo‘lmadi 😔")
 
 print("BOT STARTED 🚀")
 bot.infinity_polling()
