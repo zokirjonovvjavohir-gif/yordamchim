@@ -25,7 +25,7 @@ def ask_ai(text):
         "messages": [
         {
             "role": "system",
-            "content": "Sen o‘zbek tilida aniq, tushunarli va qisqa javob beradigan yordamchi botsan."
+            "content": "Sen o‘zbek tilida juda aniq, tushunarli javob beradigan yordamchi botsan."
         },
         {
             "role": "user",
