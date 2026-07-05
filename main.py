@@ -5,6 +5,13 @@ import os
 TOKEN = os.getenv("TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
+print("TOKEN:", TOKEN)
+print("GROQ:", GROQ_API_KEY)
+
+if not TOKEN:
+    print("TOKEN YO‘Q!")
+    exit()
+
 bot = telebot.TeleBot(TOKEN)
 
 def ask_ai(text):
@@ -29,4 +36,5 @@ def handle(message):
     except:
         bot.reply_to(message, "Xatolik 😕")
 
-bot.polling()
+print("BOT STARTED")
+bot.polling(none_stop=True)
