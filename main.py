@@ -21,14 +21,19 @@ def ask_ai(text):
         "Content-Type": "application/json"
     }
     data = {
-        "model": "llama3-70b-8192",
+        "model": "llama3-8b-8192",
         "messages": [{"role": "user", "content": text}]
     }
 
     res = requests.post(url, headers=headers, json=data)
-    return res.json()["choices"][0]["message"]["content"]
 
-@bot.message_handler(func=lambda message: True)
+    print(res.status_code)
+    print(res.text)
+
+    if res.status_code != 200:
+        return "AI xatolik (API ishlamadi)"
+
+    return res.json()["choices"][0]["message"]["content"]
 def handle(message):
     try:
         reply = ask_ai(message.text)
