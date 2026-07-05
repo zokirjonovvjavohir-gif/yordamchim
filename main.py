@@ -21,10 +21,18 @@ def ask_ai(text):
         "Content-Type": "application/json"
     }
     data = {
-         "model": "llama-3.1-8b-instant",
-        "messages": [{"role": "user", "content": text}]
-    }
-
+    "model": "llama3-8b-8192",
+    "messages": [
+        {
+            "role": "system",
+            "content": "Sen o‘zbek tilida aniq, tushunarli va qisqa javob beradigan yordamchi botsan."
+        },
+        {
+            "role": "user",
+            "content": text
+        }
+    ]
+}
     res = requests.post(url, headers=headers, json=data)
 
     print(res.status_code)
