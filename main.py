@@ -25,31 +25,4 @@ def ask_ai(text):
         "messages": [
         {
             "role": "system",
-            "content": "Sen o‘zbek tilida juda aniq, tushunarli javob beradigan yordamchi botsan."
-        },
-        {
-            "role": "user",
-            "content": text
-        } 
-    ]
-}
-    res = requests.post(url, headers=headers, json=data)
-
-    print(res.status_code)
-    print(res.text)
-
-    if res.status_code != 200:
-        return "AI xatolik (API ishlamadi)"
-
-    return res.json()["choices"][0]["message"]["content"]
-
-@bot.message_handler(func=lambda message: True)
-def handle(message):
-    try:
-        reply = ask_ai(message.text)
-        bot.reply_to(message, reply)
-    except:
-        bot.reply_to(message, "Uzir xozir javop bera olmayman 😕")
-
-print("BOT STARTED")
-bot.polling(none_stop=True)
+            "content": "Sen o‘zbek tilida juda aniq, tushunarli va kocha tilida sokinib 
