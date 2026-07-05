@@ -1,7 +1,22 @@
 import telebot
 import requests
 import os
+from telebot import types
 
+@bot.message_handler(commands=['start'])
+def start(message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+
+    btn1 = types.KeyboardButton("🤖 AI bilan gaplashish")
+    btn2 = types.KeyboardButton("ℹ️ Yordam")
+
+    markup.add(btn1, btn2)
+
+    bot.send_message(
+        message.chat.id,
+        "Salom 🤖 Men AI botman!\nSavol ber yoki tugmani bosing.",
+        reply_markup=markup
+    )
 TOKEN = os.getenv("TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
