@@ -14,12 +14,15 @@ if not TOKEN or not GROQ_API_KEY:
 bot = telebot.TeleBot(TOKEN)
 
 user_history = {}
-user_settings = {}   # Foydalanuvchi sozlamalari (murojaat usuli)
+user_settings = {}   # Murojaat usuli
+user_assistant_name = {}  # Yangi: AI nomi
 
 # ==================== ELIS QIZBOLA PROMPT ====================
 def get_system_prompt(user_id):
-    address = user_settings.get(user_id, "aka")  # default "aka"
-    return f"""Sen Elis ismli qiz bolasisan. 20-22 yoshlardasan, do'stona, ochiq va bemalol uslubda gaplashasan.
+    address = user_settings.get(user_id, "aka")
+    name = user_assistant_name.get(user_id, "Elis")  # Default ism
+    
+    return f"""Sen {name} ismli qiz bolasisan. 20-22 yoshlardasan, do'stona, ochiq va bemalol uslubda gaplashasan.
 
 Foydalanuvchiga har doim "{address}" deb murojaat qilasan.
 
@@ -76,7 +79,7 @@ def ask_ai(message, user_text):
         return "Miyya ishdan chiqdi, ozgina kut 😅"
 
 
-# ---------------- OCR (o'zgarmadi) ----------------
+# ---------------- OCR ----------------
 def ocr_space_image(image_path):
     url = "https://api.ocr.space/parse/image"
     try:
@@ -88,9 +91,8 @@ def ocr_space_image(image_path):
         return ""
 
 
-# ---------------- START MENU ----------------
-@bot.message_handler(commands=['start'])
-def start(message):
+# ---------------- KEYBOARD ----------------
+def get_main_keyboard():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     markup.add(
         types.KeyboardButton("🤖 Suxbatlashamiz"),
@@ -98,17 +100,57 @@ def start(message):
     )
     markup.add(
         types.KeyboardButton("⚙️ Murojaatni o'zgartirish"),
+        types.KeyboardButton("✍️ AI ga ism qo‘yish"),   # YANGI TUGMA
         types.KeyboardButton("🧹 Tarixni tozalash")
     )
+    return markup
+
+
+# ---------------- START ----------------
+@bot.message_handler(commands=['start'])
+def start(message):
+    user_id = message.chat.id
+    
+    if user_id not in user_assistant_name:
+        user_assistant_name[user_id] = "Elis"
+    if user_id not in user_settings:
+        user_settings[user_id] = "aka"
 
     bot.send_message(
         message.chat.id,
-        "👋 <b>Salom!</b>\nMen Elisman 😊\n\nNima gap? Gapir!",
-        reply_markup=markup,
+        f"👋 <b>Salom {user_assistant_name[user_id]}!</b>\nMen {user_assistant_name[user_id]}man 😊\n\nNima gap? Gapir!",
+        reply_markup=get_main_keyboard(),
         parse_mode="HTML"
     )
 
 
+# ---------------- YANGI: AI GA ISM QO‘YISH ----------------
+@bot.message_handler(func=lambda m: m.text == "✍️ AI ga ism qo‘yish")
+def set_assistant_name(message):
+    bot.send_message(
+        message.chat.id, 
+        "AI assistentingizga yangi ism bering:\nMasalan: Malika, Sofia, Lola, Professor va h.k."
+    )
+    bot.register_next_step_handler(message, save_assistant_name)
+
+
+def save_assistant_name(message):
+    user_id = message.chat.id
+    new_name = message.text.strip()
+    
+    if len(new_name) < 2 or len(new_name) > 25:
+        bot.send_message(user_id, "Ism 2-25 ta belgi orasida bo‘lishi kerak.")
+        return
+    
+    user_assistant_name[user_id] = new_name
+    bot.send_message(
+        user_id, 
+        f"✅ Muvaffaqiyatli! Endi sening AIingning nomi:\n**{new_name}**",
+        reply_markup=get_main_keyboard()
+    )
+
+
+# ---------------- BOSHQA TUGMALAR ----------------
 @bot.message_handler(func=lambda m: m.text == "⚙️ Murojaatni o'zgartirish")
 def set_address(message):
     bot.send_message(message.chat.id, "Menga qanday murojaat qilishimni yozib yubor (masalan: aka, brat, azizim, [ismingiz] va h.k.)")
@@ -136,11 +178,6 @@ def ai_mode(message):
 @bot.message_handler(func=lambda m: m.text == "📷 Rasm yubor")
 def photo_info(message):
     bot.send_message(message.chat.id, "📸 Rasmni yubor, ko'rib chiqaman 😊")
-
-
-@bot.message_handler(func=lambda m: m.text == "ℹ️ Yordam")
-def help_cmd(message):
-    bot.send_message(message.chat.id, "🔥 Menga savol yoz yoki rasm tashla. Bemalol suhbatlashamiz!")
 
 
 # ---------------- TEXT ----------------
@@ -171,6 +208,10 @@ def handle_photo(message):
             reply = ask_ai(message, "Bu rasmda nima bor? Tahlil qil.")
 
         bot.send_message(message.chat.id, reply)
+
+        # Tozalash
+        if os.path.exists(image_path):
+            os.remove(image_path)
 
     except Exception:
         bot.send_message(message.chat.id, "Rasm bilan muammo chiqdi 😔")
