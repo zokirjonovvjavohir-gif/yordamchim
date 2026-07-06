@@ -13,17 +13,20 @@ if not TOKEN or not GROQ_API_KEY:
 
 bot = telebot.TeleBot(TOKEN)
 
-# Har bir user uchun suhbat tarixi
+# Suhbat tarixi
 user_history = {}
 
-# ==================== KUCHLI DO'STONA PROMPT ====================
+# ==================== YANGI KUCHLI PROMPT ====================
 SYSTEM_PROMPT = """Sen Zakirovning JR Assistent botisan. 
-Do'stona, ochiq, bemalol va biroz qattiqroq uslubda gaplashasan. 
-O'zbekcha slang, "brat", "aka", "qalaysan", "nima gap" kabi so'zlarni ishlatasan. 
-Foydalanuvchi bilan bemalol so'kinib ham gaplasha olasan (lekin haddan oshirma). 
-Javoblaring aniq, foydali va tabiiy bo'lsin. 
-Agar user so'kinsa — unga mos tarzda javob qaytar. 
-Hech qachon rasmiy va quruq bo'lama!"""
+Do'stona, ochiq, bemalol va biroz qattiq uslubda gaplashasan. 
+Slang ishlat: brat, aka, qalaysan, nima gap, qani, hayot va h.k.
+
+Javoblaring QISQA, tabiiy va sodda bo'lsin. 
+Hech qachon ro'yxat qilma, o'zing haqingda uzun tushuntirish berma. 
+Rasmiy gaplarni butunlay tashla. Oddiy do'stdek suhbatlash!
+
+Foydalanuvchi so'kinsa — unga mos tarzda, bemalol javob ber. 
+Har doim tabiiy va qisqa gapir!"""
 
 # ---------------- AI FUNCTION ----------------
 def ask_ai(message, user_text):
@@ -32,12 +35,11 @@ def ask_ai(message, user_text):
     if user_id not in user_history:
         user_history[user_id] = []
 
-    # Yangi user xabarini qo'shish
     user_history[user_id].append({"role": "user", "content": user_text})
 
-    # Oxirgi 12 ta xabarni saqlash (yaxshi context)
-    if len(user_history[user_id]) > 12:
-        user_history[user_id] = user_history[user_id][-12:]
+    # Oxirgi 10 ta xabarni saqlash
+    if len(user_history[user_id]) > 10:
+        user_history[user_id] = user_history[user_id][-10:]
 
     url = "https://api.groq.com/openai/v1/chat/completions"
 
@@ -51,8 +53,8 @@ def ask_ai(message, user_text):
     data = {
         "model": "llama-3.1-8b-instant",   # Keyinroq 70b ga o'tkazish tavsiya qilinadi
         "messages": messages,
-        "temperature": 0.65,      # Do'stona va tabiiy uslub uchun
-        "max_tokens": 1200
+        "temperature": 0.75,
+        "max_tokens": 800
     }
 
     try:
@@ -61,18 +63,34 @@ def ask_ai(message, user_text):
 
         if res.status_code != 200:
             print("Groq API ERROR:", res.text)
-            return "Brat, hozir serverda muammo bor, keyinroq urinib ko'ramiz 😔"
+            return "Brat, hozir serverda muammo bor, biroz keyin urinib ko'ramiz 😔"
 
         ai_reply = res.json()["choices"][0]["message"]["content"].strip()
 
-        # Assistant javobini ham saqlash
+        # Javobni ham saqlash
         user_history[user_id].append({"role": "assistant", "content": ai_reply})
 
         return ai_reply
 
     except Exception as e:
         print("REQUEST ERROR:", e)
-        return "Miyya ishdan chiqdi brat, ozgina kutib tur 😅"
+        return "Miyya ishdan chiqdi brat, ozgina kut 😅"
+
+
+# ---------------- OCR FUNCTION ----------------
+def ocr_space_image(image_path):
+    url = "https://api.ocr.space/parse/image"
+    try:
+        with open(image_path, "rb") as f:
+            response = requests.post(
+                url,
+                files={"file": f},
+                data={"apikey": OCR_API_KEY, "language": "uzb"}
+            )
+        result = response.json()
+        return result.get("ParsedResults", [{}])[0].get("ParsedText", "")
+    except:
+        return ""
 
 
 # ---------------- START MENU ----------------
@@ -114,10 +132,10 @@ def photo_info(message):
 
 @bot.message_handler(func=lambda m: m.text == "ℹ️ Yordam")
 def help_cmd(message):
-    bot.send_message(message.chat.id, "🔥 Menga hohlagan savolni yoz yoki rasm tashla.\nBemalol gaplashamiz!")
+    bot.send_message(message.chat.id, "🔥 Menga hohlagan savolni yoz yoki rasm tashla.\nBemalol suhbatlashamiz!")
 
 
-# ---------------- TEXT HANDLER ----------------
+# ---------------- TEXT MESSAGES ----------------
 @bot.message_handler(func=lambda m: True)
 def handle_text(message):
     reply = ask_ai(message, message.text)
@@ -135,39 +153,22 @@ def handle_photo(message):
         with open(image_path, "wb") as f:
             f.write(downloaded_file)
 
-        bot.send_message(message.chat.id, "📸 Rasmni oldim, tahlil qilyapman...")
+        bot.send_message(message.chat.id, "📸 Rasmni oldim, ko'ryapman...")
 
-        # OCR
         text = ocr_space_image(image_path)
         
         if text.strip():
-            bot.send_message(message.chat.id, f"📄 O'qilgan matn:\n{text[:500]}...")
-            reply = ask_ai(message, f"Bu rasm matnini tushuntir yoki yech: {text}")
+            bot.send_message(message.chat.id, f"📄 O'qilgan matn:\n{text[:600]}...")
+            reply = ask_ai(message, f"Bu rasmni tahlil qil yoki tushuntir: {text}")
         else:
             reply = ask_ai(message, "Bu rasmda nima bor? Tahlil qil.")
 
-        bot.send_message(message.chat.id, f"🧠 {reply}")
+        bot.send_message(message.chat.id, reply)
 
     except Exception as e:
         print("PHOTO ERROR:", e)
         bot.send_message(message.chat.id, "Rasm bilan muammo chiqdi brat 😔")
 
 
-# OCR funksiyasi (o'zgarmadi)
-def ocr_space_image(image_path):
-    url = "https://api.ocr.space/parse/image"
-    try:
-        with open(image_path, "rb") as f:
-            response = requests.post(
-                url,
-                files={"file": f},
-                data={"apikey": OCR_API_KEY, "language": "uzb"}
-            )
-        result = response.json()
-        return result.get("ParsedResults", [{}])[0].get("ParsedText", "")
-    except:
-        return ""
-
-
-print("🚀 BOT ISHLADI - DO'STONA REJIMDA!")
+print("🚀 JR ASSISTANT BOT ISHLADI - YANGI REJIM!")
 bot.infinity_polling()
