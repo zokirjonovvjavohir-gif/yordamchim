@@ -108,7 +108,7 @@ def start(message):
 
     bot.send_message(
         message.chat.id,
-        "👊 <b>Salom brat!</b>\nMen Zakirovning JR Assistentiman.\n\nNima gap? Gapir, yordam beraman!",
+        "👊 <b>Salom Shef!</b>\nMen Elis man.\n\nNima gap? Gapiring, yordam beraman!",
         reply_markup=markup,
         parse_mode="HTML"
     )
@@ -122,7 +122,7 @@ def clear_history(message):
 
 @bot.message_handler(func=lambda m: m.text in ["🤖 Suxbatlashamiz", "🤖 keling biroz suxbatlashamiz"])
 def ai_mode(message):
-    bot.send_message(message.chat.id, "✍️ Endi bemalol gapir, nima bo'lsa ham yoz! 🔥")
+    bot.send_message(message.chat.id, "✍️ Endi bemalol gapiring, nima bo'lsa ham yozing! 🔥")
 
 
 @bot.message_handler(func=lambda m: m.text == "📷 Rasm yubor")
